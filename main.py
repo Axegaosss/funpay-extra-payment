@@ -343,6 +343,14 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
         fields["fields[desc][ru]"] = description
         fields["fields[desc][en]"] = description
 
+        # Диагностика отправляемых полей (CSRF не выводим)
+        safe_fields = {
+            key: value
+            for key, value in fields.items()
+            if key != "csrf_token"
+        }
+        logging.info("SAVE FIELDS: %s", safe_fields)
+
         headers = {
             "accept": "*/*",
             "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -356,6 +364,24 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
             fields,
             raise_not_200=False
         )
+
+        # Диагностика ответа FunPay
+        logging.info("SAVE STATUS: %s", result.status_code)
+        logging.info("SAVE URL: %s", getattr(result, "url", "unknown"))
+
+        safe_response_headers = {
+            key: value
+            for key, value in result.headers.items()
+            if key.lower() in (
+                "content-type",
+                "server",
+                "location",
+                "cf-ray",
+                "cf-cache-status"
+            )
+        }
+        logging.info("SAVE HEADERS: %s", safe_response_headers)
+        logging.info("SAVE BODY: %s", result.text[:3000])
 
         if result.status_code != 200:
             logging.error(
