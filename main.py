@@ -1,6 +1,6 @@
-
 import os
 import logging
+import inspect
 from fastapi import FastAPI, Header, HTTPException
 from FunPayAPI import Account
 
@@ -64,13 +64,12 @@ def methods():
                ["lot", "offer", "category", "fields"])
     ]
     return {"methods": names}
-    @app.get("/method-info")
-def method_info():
-    import inspect
 
+
+@app.get("/method-info")
+def method_info():
     return {
         "get_lot_fields": str(inspect.signature(Account.get_lot_fields)),
         "save_lot": str(inspect.signature(Account.save_lot))
     }
     
-
