@@ -80,7 +80,6 @@ def library_info():
         "save_lot": inspect.getsource(Account.save_lot)
     }
     @app.get("/lotfields-info")
-      def lotfields_info():
-        cls = Account.get_lot_fields.__globals__["types"].LotFields
-           return {"source": inspect.getsource(cls)}
-
+def lotfields_info():
+    cls = Account.get_lot_fields.__globals__["types"].LotFields
+    return {"source": inspect.getsource(cls)}
