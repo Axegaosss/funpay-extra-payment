@@ -73,13 +73,18 @@ def method_info():
         "get_lot_fields": str(inspect.signature(Account.get_lot_fields)),
         "save_lot": str(inspect.signature(Account.save_lot))
     }
+
+
 @app.get("/library-info")
 def library_info():
     return {
         "get_lot_fields": inspect.getsource(Account.get_lot_fields),
         "save_lot": inspect.getsource(Account.save_lot)
     }
-    @app.get("/lotfields-info")
+
+
+@app.get("/lotfields-info")
 def lotfields_info():
     cls = Account.get_lot_fields.__globals__["types"].LotFields
     return {"source": inspect.getsource(cls)}
+        
