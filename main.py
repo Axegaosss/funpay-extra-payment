@@ -5,6 +5,7 @@ import inspect
 
 from fastapi import FastAPI, Header, HTTPException
 from FunPayAPI import Account
+from bs4 import BeautifulSoup
 
 app = FastAPI()
 
@@ -25,6 +26,7 @@ def get_account():
             status_code=500,
             detail="FunPay key not configured"
         )
+
     try:
         return Account(FUNPAY_GOLDEN_KEY).get()
     except Exception:
@@ -37,15 +39,12 @@ def get_account():
 
 @app.get("/")
 def home():
-    return {
-        "status": "FunPay Extra Payment запущен"
-    }
+    return {"status": "FunPay Extra Payment запущен"}
 
 
 @app.post("/check-funpay")
 def check_funpay(x_api_secret: str = Header(None)):
     check_secret(x_api_secret)
-
     account = get_account()
 
     return {
@@ -57,23 +56,71 @@ def check_funpay(x_api_secret: str = Header(None)):
 @app.post("/inspect-template")
 def inspect_template(x_api_secret: str = Header(None)):
     check_secret(x_api_secret)
-
     account = get_account()
 
     try:
-        lot = account.get_lot_fields(82022625)
+        response = account.method(
+            "get",
+            "lots/offerEdit?offer=82022625",
+            {},
+            {},
+            raise_not_200=True
+        )
+
+        soup = BeautifulSoup(response.content, "lxml")
+        form = soup.find("form", class_="form-offer-editor")
+
+        if not form:
+            error = soup.find("p", class_="lead")
+            message = error.get_text(strip=True) if error else "Offer form not found"
+            raise HTTPException(status_code=502, detail=message)
+
+        fields = {}
+
+        for field in form.find_all("input"):
+            name = field.get("name")
+            if name and name != "query":
+                fields[name] = field.get("value") or ""
+
+        for field in form.find_all("textarea"):
+            name = field.get("name")
+            if name:
+                fields[name] = field.get_text() or ""
+
+        for field in form.find_all("select"):
+            name = field.get("name")
+            if not name:
+                continue
+
+            parent = field.find_parent(class_="form-group")
+            if parent and "hidden" in parent.get("class", []):
+                continue
+
+            selected = field.find("option", selected=True)
+            if selected:
+                fields[name] = selected.get("value", "")
+
+        for field in form.find_all("input", {"type": "checkbox"}):
+            if field.get("name") and field.has_attr("checked"):
+                fields[field["name"]] = "on"
+
+        account.csrf_token = fields.get(
+            "csrf_token",
+            account.csrf_token
+        )
 
         return {
             "status": "success",
             "lot_id": 82022625,
-            "node_id": lot.fields.get("node_id"),
-            "title": lot.fields.get("fields[summary][ru]"),
-            "price": lot.fields.get("price")
+            "node_id": fields.get("node_id"),
+            "title": fields.get("fields[summary][ru]"),
+            "price": fields.get("price")
         }
 
+    except HTTPException:
+        raise
     except Exception:
         logging.exception("FunPay template error")
-
         raise HTTPException(
             status_code=502,
             detail="Template inspection failed. Check Railway logs."
@@ -94,13 +141,12 @@ def methods():
 def method_info():
     result = {}
 
-    for name in ("get_lot_fields", "save_lot"):
+    for name in ("get_lot_fields", "save_lot", "save_offer", "method"):
         method = getattr(Account, name, None)
-
-        if method:
-            result[name] = str(inspect.signature(method))
-        else:
-            result[name] = "not available"
+        result[name] = (
+            str(inspect.signature(method))
+            if method else "not available"
+        )
 
     return result
 
@@ -109,7 +155,7 @@ def method_info():
 def library_info():
     result = {}
 
-    for name in ("get_lot_fields", "save_lot"):
+    for name in ("get_lot_fields", "save_lot", "save_offer"):
         method = getattr(Account, name, None)
 
         if method:
@@ -127,60 +173,34 @@ def library_info():
 def lotfields_info():
     try:
         cls = Account.get_lot_fields.__globals__["types"].LotFields
-
-        return {
-            "source": inspect.getsource(cls)
-        }
-
+        return {"source": inspect.getsource(cls)}
     except Exception as e:
-        logging.exception("LotFields inspection error")
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/category-info")
 def category_info():
     result = {}
 
-    for name in (
-        "get_category",
-        "get_subcategory"
-    ):
+    for name in ("get_category", "get_subcategory"):
         method = getattr(Account, name, None)
-
         if method:
-            try:
-                result[name] = inspect.getsource(method)
-            except Exception:
-                result[name] = "Source unavailable"
+            result[name] = inspect.getsource(method)
 
     for name in ("categories", "subcategories"):
         prop = getattr(Account, name, None)
-
         if isinstance(prop, property) and prop.fget:
-            try:
-                result[name] = inspect.getsource(prop.fget)
-            except Exception:
-                result[name] = "Source unavailable"
+            result[name] = inspect.getsource(prop.fget)
 
     return result
 
 
 @app.get("/category-class-info")
 def category_class_info():
-    try:
-        from FunPayAPI import types
+    from FunPayAPI import types
 
-        return {
-            "category": inspect.getsource(types.Category),
-            "subcategory": inspect.getsource(types.SubCategory)
-        }
-
-    except Exception as e:
-        logging.exception("Category inspection error")
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-    )
+    return {
+        "category": inspect.getsource(types.Category),
+        "subcategory": inspect.getsource(types.SubCategory)
+            }
+    
