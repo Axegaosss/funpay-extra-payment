@@ -202,5 +202,5 @@ def category_class_info():
     return {
         "category": inspect.getsource(types.Category),
         "subcategory": inspect.getsource(types.SubCategory)
-            }
+        }
     
