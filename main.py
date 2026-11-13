@@ -78,4 +78,13 @@ def library_info():
 def lotfields_info():
     cls = Account.get_lot_fields.__globals__["types"].LotFields
     return {"source": inspect.getsource(cls)}
+
+@app.get("/category-info")
+def category_info():
+    return {
+        "get_category": inspect.getsource(Account.get_category),
+        "get_subcategory": inspect.getsource(Account.get_subcategory),
+        "categories": inspect.getsource(Account.categories.fget),
+        "subcategories": inspect.getsource(Account.subcategories.fget)
+    }    
     
