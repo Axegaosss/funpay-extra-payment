@@ -37,15 +37,14 @@ def check_funpay(x_api_secret: str = Header(None)):
 @app.post("/inspect-template")
 def inspect_template(x_api_secret: str = Header(None)):
     check_secret(x_api_secret)
-    if not FUNPAY_GOLDEN_KEY:
-        raise HTTPException(status_code=500, detail="FunPay key not configured")
-    try:
-        account = Account(FUNPAY_GOLDEN_KEY).get()
-        lot = account.get_lot_fields(82022625)
-        return {
-            "status": "success",
-            "lot_id": 82022625,
-            "fields": list(lot.fields.keys())
+    account = Account(FUNPAY_GOLDEN_KEY).get()
+    lot = account.get_lot_fields(82022625)
+    return {
+        "lot_id": 82022625,
+        "node_id": lot.fields.get("node_id"),
+        "title": lot.fields.get("fields[summary][ru]"),
+        "price": lot.fields.get("price")
+    }
         }
     except Exception:
         logging.exception("FunPay template error")
