@@ -228,7 +228,6 @@ def inspect_create_form(x_api_secret: str = Header(None)):
         )
 
 
-# НОВЫЙ ENDPOINT: ПОЛЯ ШАБЛОНА
 @app.get("/inspect-template-fields")
 def inspect_template_fields(x_api_secret: str = Header(None)):
     check_secret(x_api_secret)
@@ -328,7 +327,9 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
 
         fields["offer_id"] = "0"
         fields["node_id"] = "888"
-        fields["location"] = "trade"
+        fields["location"] = ""
+        fields["server_id"] = "1223"
+        fields["fields[type]"] = "Прочее"
         fields["csrf_token"] = account.csrf_token
         fields["price"] = str(amount)
         fields["amount"] = "1"
@@ -489,4 +490,5 @@ def category_class_info():
     return {
         "category": inspect.getsource(types.Category),
         "subcategory": inspect.getsource(types.SubCategory)
-        }
+            }
+        
