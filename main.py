@@ -87,4 +87,13 @@ def category_info():
         "categories": inspect.getsource(Account.categories.fget),
         "subcategories": inspect.getsource(Account.subcategories.fget)
     }    
+
+
+@app.get("/category-class-info")
+def category_class_info():
+    from FunPayAPI import types
+    return {
+        "category": inspect.getsource(types.Category),
+        "subcategory": inspect.getsource(types.SubCategory)
+    }
     
