@@ -1,3 +1,4 @@
+from FunPayAPI import Account
 import os
 from fastapi import FastAPI, Header, HTTPException
 
