@@ -24,8 +24,10 @@ def check_secret(x_api_secret):
 @app.post("/check-funpay")
 def check_funpay(x_api_secret: str = Header(None)):
     check_secret(x_api_secret)
+
     if not FUNPAY_GOLDEN_KEY:
         raise HTTPException(status_code=500, detail="FunPay key not configured")
+
     try:
         account = Account(FUNPAY_GOLDEN_KEY).get()
         return {"status": "connected", "username": account.username}
@@ -37,14 +39,19 @@ def check_funpay(x_api_secret: str = Header(None)):
 @app.post("/inspect-template")
 def inspect_template(x_api_secret: str = Header(None)):
     check_secret(x_api_secret)
-    account = Account(FUNPAY_GOLDEN_KEY).get()
-    lot = account.get_lot_fields(82022625)
-    return {
-        "lot_id": 82022625,
-        "node_id": lot.fields.get("node_id"),
-        "title": lot.fields.get("fields[summary][ru]"),
-        "price": lot.fields.get("price")
-    }
+
+    if not FUNPAY_GOLDEN_KEY:
+        raise HTTPException(status_code=500, detail="FunPay key not configured")
+
+    try:
+        account = Account(FUNPAY_GOLDEN_KEY).get()
+        lot = account.get_lot_fields(82022625)
+
+        return {
+            "lot_id": 82022625,
+            "node_id": lot.fields.get("node_id"),
+            "title": lot.fields.get("fields[summary][ru]"),
+            "price": lot.fields.get("price")
         }
     except Exception:
         logging.exception("FunPay template error")
@@ -78,6 +85,7 @@ def lotfields_info():
     cls = Account.get_lot_fields.__globals__["types"].LotFields
     return {"source": inspect.getsource(cls)}
 
+
 @app.get("/category-info")
 def category_info():
     return {
@@ -85,7 +93,7 @@ def category_info():
         "get_subcategory": inspect.getsource(Account.get_subcategory),
         "categories": inspect.getsource(Account.categories.fget),
         "subcategories": inspect.getsource(Account.subcategories.fget)
-    }    
+    }
 
 
 @app.get("/category-class-info")
