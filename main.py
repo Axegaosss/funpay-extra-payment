@@ -192,6 +192,7 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
         # Шаблон 82022625 не редактируется.
         fields["offer_id"] = "0"
         fields["node_id"] = "888"
+        fields["location"] = "trade"
         fields["csrf_token"] = account.csrf_token
         fields["price"] = str(amount)
         fields["amount"] = "1"
