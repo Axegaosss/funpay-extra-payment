@@ -31,4 +31,26 @@ def check_funpay(x_api_secret: str = Header(None)):
             status_code=502,
             detail="FunPay connection failed"
         )
+    
+@app.post("/inspect-template")
+def inspect_template(x_api_secret: str = Header(None)):
+    if not API_SECRET or x_api_secret != API_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        account = Account(FUNPAY_GOLDEN_KEY).get()
+        lot = account.get_lot_fields(82022625)
+
+        return {
+            "status": "success",
+            "lot_id": 82022625,
+            "subcategory_id": lot.subcategory.id,
+            "field_names": list(lot.fields.keys())
+        }
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="Не удалось прочитать шаблон"
+        )
+        
         
