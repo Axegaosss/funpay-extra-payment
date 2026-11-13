@@ -44,9 +44,7 @@ def inspect_template(x_api_secret: str = Header(None)):
         return {
             "status": "success",
             "lot_id": 82022625,
-            "subcategory_id": lot.subcategory.id,
-            "field_names": list(lot.fields.keys())
+            "fields": list(lot.fields.keys())
         }
-    
-        except Exception as e:
-    raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
