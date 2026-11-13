@@ -175,7 +175,6 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
     account = get_account()
 
     try:
-        # Получаем форму СОЗДАНИЯ нового лота.
         response = account.method(
             "get",
             "lots/offerEdit?node=888",
@@ -185,11 +184,8 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
         )
 
         fields = read_form(response)
-
         account.csrf_token = fields.get("csrf_token", account.csrf_token)
 
-        # Важно: 0 означает новый лот.
-        # Шаблон 82022625 не редактируется.
         fields["offer_id"] = "0"
         fields["node_id"] = "888"
         fields["location"] = "trade"
@@ -212,18 +208,34 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
             "x-requested-with": "XMLHttpRequest"
         }
 
+        # Не выбрасываем исключение на HTTP 428,
+        # чтобы получить и записать ответ FunPay.
         result = account.method(
             "post",
             "lots/offerSave",
             headers,
             fields,
-            raise_not_200=True
+            raise_not_200=False
         )
+
+        if result.status_code != 200:
+            logging.error(
+                "FunPay HTTP %s response: %s",
+                result.status_code,
+                result.text[:3000]
+            )
+            raise HTTPException(
+                status_code=502,
+                detail=f"FunPay error: {result.status_code}"
+            )
 
         try:
             result_data = result.json()
         except Exception:
-            logging.error("FunPay returned a non-JSON save response")
+            logging.error(
+                "FunPay non-JSON response: %s",
+                result.text[:3000]
+            )
             raise HTTPException(
                 status_code=502,
                 detail="FunPay ответил не JSON. Проверь Railway Logs."
@@ -243,7 +255,7 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
         link = find_lot_link(result_data)
 
         if not link:
-            logging.info("FunPay save response keys: %s", list(result_data.keys()))
+            logging.info("FunPay save response: %s", result_data)
             return {
                 "status": "saved",
                 "message": "Ответ об успешном сохранении получен, но ID лота не найден.",
@@ -339,5 +351,5 @@ def category_class_info():
     return {
         "category": inspect.getsource(types.Category),
         "subcategory": inspect.getsource(types.SubCategory)
-    }
-    
+        }
+        
