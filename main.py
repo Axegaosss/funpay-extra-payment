@@ -73,5 +73,10 @@ def method_info():
         "get_lot_fields": str(inspect.signature(Account.get_lot_fields)),
         "save_lot": str(inspect.signature(Account.save_lot))
     }
-    
+@app.get("/library-info")
+def library_info():
+    return {
+        "get_lot_fields": inspect.getsource(Account.get_lot_fields),
+        "save_lot": inspect.getsource(Account.save_lot)
+    }
 
