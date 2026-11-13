@@ -1,24 +1,34 @@
-from FunPayAPI import Account
+
 import os
 from fastapi import FastAPI, Header, HTTPException
+from FunPayAPI import Account
 
 app = FastAPI()
 
 API_SECRET = os.getenv("API_SECRET")
+FUNPAY_GOLDEN_KEY = os.getenv("FUNPAY_GOLDEN_KEY")
 
 @app.get("/")
 def home():
     return {"status": "FunPay Extra Payment запущен"}
 
-@app.post("/create-payment")
-def create_payment(data: dict, x_api_secret: str = Header(None)):
+@app.post("/check-funpay")
+def check_funpay(x_api_secret: str = Header(None)):
     if not API_SECRET or x_api_secret != API_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    order_id = str(data.get("order_id", "")).strip()
-    amount = data.get("amount")
+    if not FUNPAY_GOLDEN_KEY:
+        raise HTTPException(status_code=500, detail="FunPay key not configured")
 
-    if not order_id or not isinstance(amount, (int, float)) or amount < 1:
-        raise HTTPException(status_code=400, detail="Проверь номер заказа и сумму")
-
-    return {"status": "test", "order_id": order_id, "amount": amount}
+    try:
+        account = Account(FUNPAY_GOLDEN_KEY).get()
+        return {
+            "status": "connected",
+            "username": account.username
+        }
+    except Exception:
+        raise HTTPException(
+            status_code=502,
+            detail="FunPay connection failed"
+        )
+        
