@@ -46,5 +46,10 @@ def inspect_template(x_api_secret: str = Header(None)):
             "lot_id": 82022625,
             "fields": list(lot.fields.keys())
         }
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        except Exception:
+        import logging
+        logging.exception("Ошибка чтения шаблона FunPay")
+        raise HTTPException(
+            status_code=502,
+            detail="Ошибка чтения шаблона. Смотри Railway Logs"
+        )
