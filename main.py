@@ -51,4 +51,12 @@ def inspect_template(x_api_secret: str = Header(None)):
     except Exception:
         logging.exception("FunPay template error")
         raise HTTPException(status_code=502, detail="Template inspection failed")
+        @app.get("/methods")
+def methods():
+    names = [
+        name for name in dir(Account)
+        if any(word in name.lower() for word in
+               ["lot", "offer", "category", "fields"])
+    ]
+    return {"methods": names}
         
