@@ -155,7 +155,6 @@ def inspect_template(x_api_secret: str = Header(None)):
         raise HTTPException(status_code=502, detail="Template inspection failed")
 
 
-# НОВЫЙ ДИАГНОСТИЧЕСКИЙ ENDPOINT
 @app.get("/inspect-create-form")
 def inspect_create_form(x_api_secret: str = Header(None)):
     check_secret(x_api_secret)
@@ -226,6 +225,73 @@ def inspect_create_form(x_api_secret: str = Header(None)):
         raise HTTPException(
             status_code=502,
             detail="Не удалось проверить форму создания"
+        )
+
+
+# НОВЫЙ ENDPOINT: ПОЛЯ ШАБЛОНА
+@app.get("/inspect-template-fields")
+def inspect_template_fields(x_api_secret: str = Header(None)):
+    check_secret(x_api_secret)
+    account = get_account()
+
+    try:
+        response = account.method(
+            "get",
+            "lots/offerEdit?offer=82022625",
+            {},
+            {},
+            raise_not_200=True
+        )
+
+        soup = BeautifulSoup(response.content, "lxml")
+        form = soup.find("form", class_="form-offer-editor")
+
+        if not form:
+            raise HTTPException(
+                status_code=502,
+                detail="Форма шаблона не найдена"
+            )
+
+        result = {}
+
+        for name in ("server_id", "fields[type]"):
+            field = form.find(attrs={"name": name})
+
+            if not field:
+                result[name] = None
+                continue
+
+            if field.name == "select":
+                selected = (
+                    field.find("option", selected=True)
+                    or field.find("option")
+                )
+                result[name] = {
+                    "value": selected.get("value", "") if selected else "",
+                    "options": [
+                        {
+                            "value": option.get("value", ""),
+                            "selected": option.has_attr("selected")
+                        }
+                        for option in field.find_all("option")
+                    ]
+                }
+            else:
+                result[name] = field.get("value", "")
+
+        return {
+            "status": "success",
+            "lot_id": 82022625,
+            "fields": result
+        }
+
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Template fields inspection error")
+        raise HTTPException(
+            status_code=502,
+            detail="Не удалось проверить поля шаблона"
         )
 
 
@@ -423,6 +489,4 @@ def category_class_info():
     return {
         "category": inspect.getsource(types.Category),
         "subcategory": inspect.getsource(types.SubCategory)
-    }
-    
-        
+        }
