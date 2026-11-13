@@ -1,5 +1,7 @@
 
+
 import os
+import logging
 from fastapi import FastAPI, Header, HTTPException
 from FunPayAPI import Account
 
@@ -12,30 +14,30 @@ FUNPAY_GOLDEN_KEY = os.getenv("FUNPAY_GOLDEN_KEY")
 def home():
     return {"status": "FunPay Extra Payment запущен"}
 
-@app.post("/check-funpay")
-def check_funpay(x_api_secret: str = Header(None)):
+def check_secret(x_api_secret):
     if not API_SECRET or x_api_secret != API_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
+
+@app.post("/check-funpay")
+def check_funpay(x_api_secret: str = Header(None)):
+    check_secret(x_api_secret)
 
     if not FUNPAY_GOLDEN_KEY:
         raise HTTPException(status_code=500, detail="FunPay key not configured")
 
     try:
         account = Account(FUNPAY_GOLDEN_KEY).get()
-        return {
-            "status": "connected",
-            "username": account.username
-        }
+        return {"status": "connected", "username": account.username}
     except Exception:
-        raise HTTPException(
-            status_code=502,
-            detail="FunPay connection failed"
-        )
-    
+        logging.exception("FunPay connection error")
+        raise HTTPException(status_code=502, detail="FunPay connection failed")
+
 @app.post("/inspect-template")
 def inspect_template(x_api_secret: str = Header(None)):
-    if not API_SECRET or x_api_secret != API_SECRET:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+    check_secret(x_api_secret)
+
+    if not FUNPAY_GOLDEN_KEY:
+        raise HTTPException(status_code=500, detail="FunPay key not configured")
 
     try:
         account = Account(FUNPAY_GOLDEN_KEY).get()
@@ -46,10 +48,7 @@ def inspect_template(x_api_secret: str = Header(None)):
             "lot_id": 82022625,
             "fields": list(lot.fields.keys())
         }
-        except Exception:
-        import logging
-        logging.exception("Ошибка чтения шаблона FunPay")
-        raise HTTPException(
-            status_code=502,
-            detail="Ошибка чтения шаблона. Смотри Railway Logs"
-        )
+    except Exception:
+        logging.exception("FunPay template error")
+        raise HTTPException(status_code=502, detail="Template inspection failed")
+        
