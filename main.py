@@ -155,6 +155,80 @@ def inspect_template(x_api_secret: str = Header(None)):
         raise HTTPException(status_code=502, detail="Template inspection failed")
 
 
+# НОВЫЙ ДИАГНОСТИЧЕСКИЙ ENDPOINT
+@app.get("/inspect-create-form")
+def inspect_create_form(x_api_secret: str = Header(None)):
+    check_secret(x_api_secret)
+    account = get_account()
+
+    try:
+        response = account.method(
+            "get",
+            "lots/offerEdit?node=888",
+            {},
+            {},
+            raise_not_200=True
+        )
+
+        soup = BeautifulSoup(response.content, "lxml")
+        form = soup.find("form", class_="form-offer-editor")
+
+        if not form:
+            return {
+                "status": "error",
+                "message": "Форма создания не найдена",
+                "page_title": soup.title.get_text(strip=True) if soup.title else None
+            }
+
+        result = []
+
+        for field in form.find_all(["input", "textarea", "select"]):
+            name = field.get("name")
+            if not name:
+                continue
+
+            item = {
+                "name": name,
+                "type": field.get("type", field.name),
+                "required": field.has_attr("required")
+            }
+
+            if field.name == "select":
+                item["options"] = [
+                    {
+                        "value": option.get("value", ""),
+                        "selected": option.has_attr("selected")
+                    }
+                    for option in field.find_all("option")
+                ]
+
+            if name != "csrf_token":
+                item["value"] = (
+                    field.get("value", "")
+                    if field.name == "input"
+                    else field.get_text(strip=True)
+                    if field.name == "textarea"
+                    else None
+                )
+
+            result.append(item)
+
+        return {
+            "status": "success",
+            "node_id": "888",
+            "fields": result
+        }
+
+    except HTTPException:
+        raise
+    except Exception:
+        logging.exception("Create form inspection error")
+        raise HTTPException(
+            status_code=502,
+            detail="Не удалось проверить форму создания"
+        )
+
+
 @app.post("/create-payment")
 def create_payment(data: dict, x_api_secret: str = Header(None)):
     check_secret(x_api_secret)
@@ -208,8 +282,6 @@ def create_payment(data: dict, x_api_secret: str = Header(None)):
             "x-requested-with": "XMLHttpRequest"
         }
 
-        # Не выбрасываем исключение на HTTP 428,
-        # чтобы получить и записать ответ FunPay.
         result = account.method(
             "post",
             "lots/offerSave",
@@ -351,5 +423,6 @@ def category_class_info():
     return {
         "category": inspect.getsource(types.Category),
         "subcategory": inspect.getsource(types.SubCategory)
-        }
+    }
+    
         
