@@ -47,10 +47,6 @@ def inspect_template(x_api_secret: str = Header(None)):
             "subcategory_id": lot.subcategory.id,
             "field_names": list(lot.fields.keys())
         }
-    except Exception:
-        raise HTTPException(
-            status_code=502,
-            detail="Не удалось прочитать шаблон"
-        )
-        
-        
+    
+        except Exception as e:
+    raise HTTPException(status_code=502, detail=str(e))
