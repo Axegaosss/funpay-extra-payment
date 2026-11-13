@@ -1,5 +1,4 @@
 
-
 import os
 import logging
 from fastapi import FastAPI, Header, HTTPException
@@ -10,13 +9,16 @@ app = FastAPI()
 API_SECRET = os.getenv("API_SECRET")
 FUNPAY_GOLDEN_KEY = os.getenv("FUNPAY_GOLDEN_KEY")
 
+
 @app.get("/")
 def home():
     return {"status": "FunPay Extra Payment запущен"}
 
+
 def check_secret(x_api_secret):
     if not API_SECRET or x_api_secret != API_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
+
 
 @app.post("/check-funpay")
 def check_funpay(x_api_secret: str = Header(None)):
@@ -31,6 +33,7 @@ def check_funpay(x_api_secret: str = Header(None)):
     except Exception:
         logging.exception("FunPay connection error")
         raise HTTPException(status_code=502, detail="FunPay connection failed")
+
 
 @app.post("/inspect-template")
 def inspect_template(x_api_secret: str = Header(None)):
@@ -51,7 +54,9 @@ def inspect_template(x_api_secret: str = Header(None)):
     except Exception:
         logging.exception("FunPay template error")
         raise HTTPException(status_code=502, detail="Template inspection failed")
-        @app.get("/methods")
+
+
+@app.get("/methods")
 def methods():
     names = [
         name for name in dir(Account)
@@ -59,4 +64,5 @@ def methods():
                ["lot", "offer", "category", "fields"])
     ]
     return {"methods": names}
-        
+    
+
