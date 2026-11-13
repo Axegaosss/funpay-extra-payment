@@ -64,5 +64,13 @@ def methods():
                ["lot", "offer", "category", "fields"])
     ]
     return {"methods": names}
+    @app.get("/method-info")
+def method_info():
+    import inspect
+
+    return {
+        "get_lot_fields": str(inspect.signature(Account.get_lot_fields)),
+        "save_lot": str(inspect.signature(Account.save_lot))
+    }
     
 
