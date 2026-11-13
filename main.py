@@ -59,11 +59,8 @@ def inspect_template(x_api_secret: str = Header(None)):
 
 @app.get("/methods")
 def methods():
-    return {
-        "account_methods": [
-            name for name in dir(Account)
-            if not name.startswith("_")
-        ]
+    names = [name for name in dir(Account) if not name.startswith("_")]
+    return {"account_methods": names}
     }
     ]
     return {"methods": names}
